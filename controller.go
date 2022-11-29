@@ -8,6 +8,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	appsinformers "k8s.io/client-go/informers/apps/v1"
@@ -78,6 +79,24 @@ func (c *controller) processItem() bool {
 		return false
 	}
 
+	ctx := context.Background()
+	_, err = c.clientset.AppsV1().Deployments(ns).Get(ctx, name, metav1.GetOptions{})
+
+	if apierrors.IsNotFound(err) {
+		fmt.Printf("handle delete event for deployment %s\n", name)
+		err := c.clientset.CoreV1().Services(ns).Delete(ctx, name, metav1.DeleteOptions{})
+		if err != nil {
+			fmt.Printf("error deleting service %s: %s\n", name, err.Error())
+			return false
+		}
+		err = c.clientset.NetworkingV1().Ingresses(ns).Delete(ctx, name, metav1.DeleteOptions{})
+		if err != nil {
+			fmt.Printf("error deleting ingress %s: %s\n", name, err.Error())
+			return false
+		}
+		return true
+	}
+
 	err = c.syncDeployment(ns, name)
 
 	if err != nil {
@@ -127,6 +146,9 @@ func createIngress(ctx context.Context, client kubernetes.Interface, svc *corev1
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      svc.Name,
 			Namespace: svc.Namespace,
+			Annotations: map[string]string{
+				"nginx.ingress.kubernetes.io/rewrite-target": "/",
+			},
 		},
 		Spec: netv1.IngressSpec{
 			Rules: []netv1.IngressRule{
