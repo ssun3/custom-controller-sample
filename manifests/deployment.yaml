@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: custom-controller-sample
+  name: custom-controller-sample
+  namespace: custom-controller-sample
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: custom-controller-sample
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: custom-controller-sample
+    spec:
+      containers:
+      - image: ssun3/customer-controller-sample:0.0.1
+        name: customer-controller-sample
+        resources: {}
+      serviceAccountName: customer-controller-sample-sa
+status: {}

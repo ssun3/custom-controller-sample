@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: custom-controller-sample-crb
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: custom-controller-sample-cv
+subjects:
+- kind: ServiceAccount
+  name: custom-controller-sample-sa
+  namespace: custom-controller-sample

@@ -82,19 +82,24 @@ func (c *controller) processItem() bool {
 	ctx := context.Background()
 	_, err = c.clientset.AppsV1().Deployments(ns).Get(ctx, name, metav1.GetOptions{})
 
-	if apierrors.IsNotFound(err) {
-		fmt.Printf("handle delete event for deployment %s\n", name)
-		err := c.clientset.CoreV1().Services(ns).Delete(ctx, name, metav1.DeleteOptions{})
-		if err != nil {
-			fmt.Printf("error deleting service %s: %s\n", name, err.Error())
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			fmt.Printf("handle delete event for deployment %s\n", name)
+			err := c.clientset.CoreV1().Services(ns).Delete(ctx, name, metav1.DeleteOptions{})
+			if err != nil {
+				fmt.Printf("error deleting service %s: %s\n", name, err.Error())
+				return false
+			}
+			err = c.clientset.NetworkingV1().Ingresses(ns).Delete(ctx, name, metav1.DeleteOptions{})
+			if err != nil {
+				fmt.Printf("error deleting ingress %s: %s\n", name, err.Error())
+				return false
+			}
+			return true
+		} else {
+			fmt.Printf("error getting deployment %s\n", name)
 			return false
 		}
-		err = c.clientset.NetworkingV1().Ingresses(ns).Delete(ctx, name, metav1.DeleteOptions{})
-		if err != nil {
-			fmt.Printf("error deleting ingress %s: %s\n", name, err.Error())
-			return false
-		}
-		return true
 	}
 
 	err = c.syncDeployment(ns, name)
